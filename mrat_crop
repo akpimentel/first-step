@@ -1,0 +1,5 @@
+!#/bin/bash
+#
+# Este script realizara un corte a las imagenes después de estar seguro que estan todas alineadas
+
+echo fslroi T2_rata_AnaKaren_reo_1.nii.gz crop.nii.gz 85 199 0 19 117 151 0 1
