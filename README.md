@@ -13,16 +13,16 @@ NOTA: Idealmente se deberian tener dos imagenes por sujeto-rata, una pre y una p
 Los siguientes pasos se implementaron en el script `mrat_reorient`
 ``` bash
 # Reorienta al espacio estandar
-fslreorient2std T2_rata_AnaKaren.nii.gz T2_rata_AnaKaren_reo.nii.gz 
+fslreorient2std T2_orig.nii.gz T2_orig_fslreo.nii.gz
 
 # Borra las etiquetas
-fslorient -deleteorient T2_rata_AnaKaren_reo1.nii.gz
+fslorient -deleteorient T2_orig_fslreo.nii.gz
 
 # Invierte la orietacion x,y
-fslswapdim T2_rata_AnaKaren_reo.nii.gz -x z -y T2_rata_AnaKaren_reo_1.nii.gz
+fslswapdim T2_orig_fslreo.nii.gz -x z -y T2_orig_fslreo_swap.nii.gz
 
 # Coloca las nuevas etiquetas
-fslorient -setqformcode 1 T2_rata_AnaKaren_reo_1.nii.gz
+fslorient -setqformcode 1 T2_orig_fslreo_swap.nii.gz
 ```
   
 ## 2. Recorte de los volumenes  
