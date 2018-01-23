@@ -40,6 +40,6 @@ Aquí hay que llevar las imagenes ya procesadas al atlas. En el caso de que se c
 Programas recomendados: [Advance Normalization Tools ANTs](https://stnava.github.io/ANTs/), [FSL](https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FSL).  
 
 # Cuantificación y Estadística  
-Esto es lo último, así que hasta que no este todo lo anterios no hayq por que preocuparse por esto.
+Esto es lo último, así que hasta que no este todo lo anterios no hay que por que preocuparse por esto aún.
 
 
