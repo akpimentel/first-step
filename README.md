@@ -43,7 +43,7 @@ Se recomienda utilizar el programa [`mrtrix`](http://www.mrtrix.org/) con su vis
 NOTA: La segmentación debe ser realizada por la misma persona para mantener la variabilidad usuario-dependiente.  
   
 ## Corregistro no lineal  
-Aquí hay que llevar las imagenes ya procesadas al atlas. En el caso de que se cuente con volumenes pre y post lesion hay que llevar la imagen de post-lesion a la pre y la pre al espacio del altas.  
+Aquí hay que llevar las imagenes ya procesadas al atlas. En el caso de que se cuente con volúmenes pre y post lesion hay que llevar la imagen de post-lesion a la pre y la pre al espacio del altas.  
 Programas recomendados: [Advance Normalization Tools ANTs](https://stnava.github.io/ANTs/), [FSL](https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FSL).  
 
 # Cuantificación y Estadística  
