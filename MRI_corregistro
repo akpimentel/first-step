@@ -1,0 +1,34 @@
+# Voxel size (x10)
+# Cambiar dimension voxeles
+ls */*rsfMRI_*E?.nii.gz | parallel fslchpixdim  {} 1.17 1.17 12
+
+### BET Estructural
+# Reorientando sujetos igual que al atlas
+ls */*_T2_Turbo*E?.nii.gz | cut -d . -f 1 | parallel fslswapdim {} x y z {}_sw
+
+# Extraer cerebro
+for i in $(ls */*T2_Turbo*_sw.nii.gz);do
+	echo $i; 
+	fslchpixdim  $i 1.17 1.17 6
+	j=$(echo $i | cut -d . -f 1);
+	center=$(cluster -i $i -t 10 | sed -n '2{p;q}' | awk '{print int($7)" "int($8)" "int($9)}');
+	bet ${i} ${j}_brain.nii.gz -r 75 -c $center -f 0.3 -g 0.25;
+	#bet ${j}_brain.nii.gz ${j}_brain.nii.gz -r 75 -c $center -f 0.25 -g -0.25;
+
+	fslchpixdim  $i 1.17 1.17 12
+	fslchpixdim ${j}_brain.nii.gz  1.17 1.17 12
+
+done
+
+slicesdir -o $(ls -r */*Turbo*_sw*gz)
+rm -rf slicesdir_BET; mv slicesdir/ slicesdir_BET
+
+### T2 brain to ATLAS
+
+atlasbrain=/mnt/Data/RAT_fMRI/Templates_Rat/TohokuUniv/brain.nii;
+# T2brain al atlas
+ls */*_T2_Turbo*brain.nii.gz | cut -d . -f 1 | parallel flirt -in {} -ref $atlasbrain -out {}_2TohokuA -omat {}_2TohokuA.mat -bins 256 -cost corratio -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 12  -interp trilinear;
+
+# Checar corregistros al atlas
+slicesdir -p /mnt/Data/RAT_fMRI/Templates_Rat/TohokuUniv/brain.nii.gz $(ls */*_2TohokuA.nii.gz)
+rm -rf slicesdir_T2toAtlas; mv slicesdir/ slicesdir_T2toAtlas
