@@ -16,8 +16,10 @@ echo -e "\e[0;31m\n[ERROR]..... $1\n\e[0m"
 }
 
 # --------------------------------------------------------------------------------
-mri=$1
-id=`echo $mri | awk -F "." '{print $1}'`
+orig=$1
+
+id=`echo $orig | awk -F "." '{print $1}'`
+mri=${id}_copia.nii.gz
 brain=${id}_brain.nii.gz
 
 # Number of inputs
@@ -26,9 +28,11 @@ if [ "$#" -lt 1 ]; then Error "No hay argumentos"; exit 0; fi
 
 echo -e "\033[48;5;39m\n[INIT]..... Modifica el tamaño de los voxeles, identifica el centro y crea una máscara binaria de $1 \n\033[0m"
 
+Info "Creando una copia del archivo original"
+cmd "cp $orig $mri"
 
 Info "Cambiar el tamaño de los Voxeles x 10"
-cmd "fslchpixdim  $mri 0.802139 5 0.802139"
+cmd "fslchpixdim  $mri 0.802139 0.802139 5"
 
 Info "El centro de $mri es:"
 center=$(cluster -i $mri -t 10 | sed -n '2{p;q}' | awk '{print int($7)" "int($8)" "int($9)}');
@@ -46,4 +50,11 @@ cmd "bet $mri $brain -r 75 -c $center -f 0.3 -g 0.25"
 #cmd "fslchpixdim tmp_mask.nii.gz  0.802139 10 0.802139"
 
 Info "Limpieza de Ruido y Corrección de Campo"
-cmd "/misc/ernst/rcruces/git_here/MRI_analytic_tools/Freesurfer_preprocessing/denoiseN4 $brain ${id} ."
+cmd "/misc/ernst/rcruces/git_here/MRI_analytic_tools/Freesurfer_preprocessing/denoiseN4 $brain ${id}_dn4 ."
+
+Info "Creando una mascara binaria del archivo ya corregido ${id}_dn4"
+fslmaths ${id}_dn4.nii.gz -bin ${id}_mask.nii.gz
+
+Info "Borra los archivos innecesarios"
+cmd "rm $brain $mri"
+
