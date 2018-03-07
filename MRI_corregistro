@@ -1,8 +1,8 @@
 # Voxel size (x10)
-# Cambiar dimension voxeles
+# Cambiar dimension voxeles de la sequencia de RESTING STATE (rsFMRI)
 ls */*rsfMRI_*E?.nii.gz | parallel fslchpixdim  {} 1.17 1.17 12
 
-### BET Estructural
+### BET Estructural T2 
 # Reorientando sujetos igual que al atlas
 ls */*_T2_Turbo*E?.nii.gz | cut -d . -f 1 | parallel fslswapdim {} x y z {}_sw
 
@@ -12,6 +12,7 @@ for i in $(ls */*T2_Turbo*_sw.nii.gz);do
 	fslchpixdim  $i 1.17 1.17 6
 	j=$(echo $i | cut -d . -f 1);
 	center=$(cluster -i $i -t 10 | sed -n '2{p;q}' | awk '{print int($7)" "int($8)" "int($9)}');
+
 	bet ${i} ${j}_brain.nii.gz -r 75 -c $center -f 0.3 -g 0.25;
 	#bet ${j}_brain.nii.gz ${j}_brain.nii.gz -r 75 -c $center -f 0.25 -g -0.25;
 

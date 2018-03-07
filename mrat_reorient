@@ -71,8 +71,9 @@ cmd "fslorient -deleteorient $reo"
 # Invierte la orietacion x,y
 cmd "fslswapdim $reo -x z -y $out"
 
-# Coloca las nuevas etiquetas
-cmd "fslorient -setqformcode 1 $out"
+# Coloca las nuevas etiquetas, hay que basarse en las etiquetas del ATLAS
+# Verificar el lado de la lesion de 20161212_094705T2TurboRAREhighress60001a001.nii.gz
+#cmd "fslorient -setqformcode 1 $out"
 
 
 #----------- Removes temporal directory -----------#
