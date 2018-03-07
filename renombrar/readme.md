@@ -5,7 +5,7 @@
   
 ### Ejemplo
 ```bash
-cat /misc/ernst/rcruces/git_here/first-step/MRI_Rename | while read line; do 
+cat /misc/ernst/rcruces/git_here/first-step/renombrar/MRI_Rename | while read line; do 
 f1=`echo $line | awk -F " " '{print $1}'`
 f2=`echo $line | awk -F " " '{print $2}'`
 mv -v $f1 $f2.nii.gz; done

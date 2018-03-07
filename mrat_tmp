@@ -1,0 +1,49 @@
+#!/bin/bash
+#  FUNCTION: PRINT COLOR COMMAND
+cmd() {
+text=$1
+echo -e "\033[38;5;130mCOMANDO -->\033[0m \033[38;5;39m$text\033[0m"
+eval $text
+}
+#  FUNCTION: PRINT INFO
+Info() {
+Col="38;5;129m" # Color code 
+echo  -e "\033[$Col\n[INFO]..... $1 \033[0m"
+}
+#  FUNCTION: PRINT ERROR
+Error() {
+echo -e "\e[0;31m\n[ERROR]..... $1\n\e[0m"
+}
+
+# --------------------------------------------------------------------------------
+mri=$1
+id=`echo $mri | awk -F "." '{print $1}'`
+brain=${id}_brain.nii.gz
+
+# Number of inputs
+if [ "$#" -lt 1 ]; then Error "No hay argumentos"; exit 0; fi
+
+
+echo -e "\033[48;5;39m\n[INIT]..... Modifica el tamaño de los voxeles, identifica el centro y crea una máscara binaria de $1 \n\033[0m"
+
+
+Info "Cambiar el tamaño de los Voxeles x 10"
+cmd "fslchpixdim  $mri 0.802139 5 0.802139"
+
+Info "El centro de $mri es:"
+center=$(cluster -i $mri -t 10 | sed -n '2{p;q}' | awk '{print int($7)" "int($8)" "int($9)}');
+echo $center
+
+Info "Estima una mascara binaria del cerebro y corta"
+cmd "bet $mri $brain -r 75 -c $center -f 0.3 -g 0.25"
+
+# Por qué remuestrea x20 una dimensión???
+#cmd "cp $brain tmp_mask.nii.gz"
+#cmd "cp $mri tmp_${id}.nii.gz"
+#bet ${j}_brain.nii.gz ${j}_brain.nii.gz -r 75 -c $center -f 0.25 -g -0.25;
+#Info "Cambia de nuevo el tamaño de los voxeles de $mri y de"
+#cmd "fslchpixdim  tmp_${id}.nii.gz 0.802139 10 0.802139"
+#cmd "fslchpixdim tmp_mask.nii.gz  0.802139 10 0.802139"
+
+Info "Limpieza de Ruido y Corrección de Campo"
+cmd "/misc/ernst/rcruces/git_here/MRI_analytic_tools/Freesurfer_preprocessing/denoiseN4 $brain ${id} ."

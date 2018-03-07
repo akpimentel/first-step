@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Voxel size (x10)
 # Cambiar dimension voxeles de la sequencia de RESTING STATE (rsFMRI)
 ls */*rsfMRI_*E?.nii.gz | parallel fslchpixdim  {} 1.17 1.17 12
