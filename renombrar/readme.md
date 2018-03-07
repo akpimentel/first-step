@@ -1,7 +1,7 @@
-# Renombrar Multiples Objetos `bash`  
 `cat` Imprime un archivo  de texto en la terminal  
 `while read` Lee cada linea de un texto impreso  
 `awk` Separa testo impreso en campos  
+# Renombrar Multiples Objetos `bash`  
   
 ### Ejemplo
 ```bash
