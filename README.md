@@ -6,7 +6,7 @@ En este repositoria vamos a guardar los pasos así como los scripts necesarios p
 
 NOTA: Idealmente se deberian tener dos imagenes por sujeto-rata, una pre y una post lesion para un mejor corregistro entre ellas, para estimar las deformaciones estructurales producidas por la lesion y para mejorar el corregistro no lineal al atlas WHS-SD.  
 
-> *Referencia del atlas:* 
+> *Referencia del atlas:*  
 > Papp, E. A., Leergaard, T. B., Calabrese, E., Johnson, G. A., & Bjaalie, J. G. (2014). Waxholm Space atlas of the Sprague Dawley rat brain. NeuroImage, 97, 374-386, [DOI: j.neuroimage.2014.04.001](https://doi.org/10.1016/j.neuroimage.2014.04.001).  
 
 # Preprocesamiento Estructural  
@@ -35,6 +35,10 @@ fslroi T2_rata_AnaKaren_reo_1.nii.gz crop.nii.gz 85 199 0 19 117 151 0 1
   
 ## 3. Denoise  
 Aquí se pueden utilizar un método basado en *non-local means* y *bias field correction* ya se encuentra implementado y libre, hay que checar este script [`denoiseN4`](https://github.com/rcruces/MRI_analytic_tools/blob/master/Freesurfer_preprocessing/denoiseN4). La documentación junto con otros métodos de *denoising* esta en este [link](https://sites.google.com/site/pierrickcoupe/softwares/denoising-for-medical-imaging).  
+> **References for denoiseN4:**  
+> - Tustison, N. J., Avants, B. B., Cook, P. A., Zheng, Y., Egan, A., Yushkevich, P. A., & Gee, J. C. (2010). N4ITK: improved N3 bias correction. IEEE transactions on medical imaging, 29(6), 1310-1320.  
+> - P. Coupé, P. Yger, S. Prima, P. Hellier, C. Kervrann, C. Barillot. An Optimized Blockwise NonLocal Means Denoising Filter for 3-D Magnetic Resonance Images. IEEE Transactions on Medical Imaging, 27(4):425–441, 2008. [MRI denoising by Pierrick Coupé](https://sites.google.com/site/pierrickcoupe/softwares/denoising-for-medical-imaging/mri-denoising).  
+  
   
  # Análisis de las IRM  
  Los siguentes pasos no son necesariamente secuenciales ya qu epueden realizarse a la mismo tiempo. Sin embargo es necesario que ambos pasos estes realizados para realizar cuantificaciones volumétricas de las lesiones y cambios pre/post.
