@@ -1,20 +1,13 @@
 # ######################################################## #
 #               Cuenta voxeles de ROIs
 # ######################################################## #
-# Carga la libreria que lee niftis
-library(oro.nifti)
-
-# Determina el directorio de trabajo
-setwd("/misc/ernst/rcruces/database/mica_epilepsia/tmp_volbrain")
-
-# Guarda todos los niftis de la carpeta en un objeto
-niftis <- list.files(pattern = "lab")
-
 
 #### FUNCION: CUENTA VOXELES X ROI ####
 get.roi <- function(Nifti, escala) {
 # Nifti   Es la dirección con nombre del archivo (character)
-# escala  Es la escala de los voxeles (x10 x1 etc), tu tienes x10!
+# escala  Es la escala de los voxeles (x10 x1 etc), tu tienes x10 Karen!
+  # Carga la libreria que lee niftis
+  require(oro.nifti)
   # Carga el archivo con las etiquetas
   nii <- readNIfTI(Nifti,reorient = FALSE)
   # Cuenta los voxeles de cada etiqueta única
@@ -33,12 +26,21 @@ get.roi <- function(Nifti, escala) {
   return(out)  
 }
 
+# -------------------------------------------------------------------- #
+# Determina el directorio de trabajo
+setwd("/misc/ernst/rcruces/database/mica_epilepsia/tmp_volbrain")
+
+# Guarda todos los niftis de la carpeta en un objeto
+niftis <- list.files(pattern = "nii.gz")
+
 # si siempre tienes las mismas etiquetas puedes iterar sobre todos los NIFTIS y concatenar las filas
 # si las rois varian en numero hay que ver otra forma de concatenar
 volumes <- c()
 for (i in niftis) {
   print(paste0("[INFO]...Obteniendo volumenes de ",i))
+  # corre la función y concatena el resultado
   volumes <- rbind(volumes,get.roi(i,1))
   }
 
-# Guarda el archivo con los volumenes en un csv
+# Guarda el df con los volumenes en un csv
+write.csv(volumes,file = "/misc/ernst/rcruces/git_here/micasoft/sandbox/raul/figures_classes/figure2/cases_volumes.csv")
