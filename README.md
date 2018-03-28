@@ -9,6 +9,12 @@ NOTA: Idealmente se deberian tener dos imagenes por sujeto-rata, una pre y una p
 > **Referencia del atlas:**  
 > - Papp, E. A., Leergaard, T. B., Calabrese, E., Johnson, G. A., & Bjaalie, J. G. (2014). Waxholm Space atlas of the Sprague Dawley rat brain. NeuroImage, 97, 374-386, [DOI: j.neuroimage.2014.04.001](https://doi.org/10.1016/j.neuroimage.2014.04.001).  
 
+# PENDIENTES  
+1. Determinar y escribir a que sujetos-rata se les requiere modificar el umbral de la mascara binaria  
+1. Montar el directorio con los archivos en /ernst  
+1. Actualizar este archivo (karen)  
+1. Pipeline y pruebas para el corregistro no lineal con el atlas (voy a usar la menos y la más dañada como control)  
+
 # Preprocesamiento Estructural  
 ## 1. Reorientacion de las Imagenes  
 Los siguientes pasos se implementaron en el script `mrat_reorient`
