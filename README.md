@@ -1,42 +1,45 @@
 # Análisis de las IRM Estructurales de Rata  
-En este repositoria vamos a guardar los pasos así como los scripts necesarios para realizar el preprocesamiento básico y el análisis estructural de las imágenes estructurales pesadas a T2 de rata para detectar lesiones.  
+En este repositorio vamos a guardar los pasos así como los scripts necesarios para realizar el preprocesamiento básico y el análisis estructural de las imágenes estructurales pesadas a T2 de rata para detectar lesiones.  
 1. Es necesario realizar un preprocesamiento semi-automatizado (depende si podemos hacer el crop automatizado o no).
-1. posteriormente una segmentacion manual de la lesion sobre la imágen de alta resolución.  
+1. Posteriormente una segmentacion manual de la lesion sobre la imágen de alta resolución.  
 1. Finalmente se realizara un corregisto al atlas [Waxholm Space Atlas of the Sprague Dawley (WHS-SD)](https://www.nitrc.org/projects/whs-sd-atlas).  
 
-NOTA: Idealmente se deberian tener dos imagenes por sujeto-rata, una pre y una post lesion para un mejor corregistro entre ellas, para estimar las deformaciones estructurales producidas por la lesion y para mejorar el corregistro no lineal al atlas WHS-SD.  
+NOTA: Idealmente se deberían tener dos imagenes por sujeto-rata, una pre y una post lesion para un mejor corregistro entre ellas, para estimar las deformaciones estructurales producidas por la lesion y para mejorar el corregistro no lineal al atlas WHS-SD.  
 
 > **Referencia del atlas:**  
 > - Papp, E. A., Leergaard, T. B., Calabrese, E., Johnson, G. A., & Bjaalie, J. G. (2014). Waxholm Space atlas of the Sprague Dawley rat brain. NeuroImage, 97, 374-386, [DOI: j.neuroimage.2014.04.001](https://doi.org/10.1016/j.neuroimage.2014.04.001).  
 
 # PENDIENTES  
-1. Determinar y escribir a que sujetos-rata se les requiere modificar el umbral de la mascara binaria  
 1. Montar el directorio con los archivos en /ernst  
-1. Actualizar este archivo (karen)  
 1. Pipeline y pruebas para el corregistro no lineal con el atlas (voy a usar la menos y la más dañada como control)  
 
 # Preprocesamiento Estructural  
 ## 1. Reorientacion de las Imagenes  
-Los siguientes pasos se implementaron en el script `mrat_reorient`
+Los siguientes pasos se implementaron en el script `MRI_corregistro`
 ``` bash
-# Reorienta al espacio estandar
-fslreorient2std T2_orig.nii.gz T2_orig_fslreo.nii.gz
 
-# Borra las etiquetas
-fslorient -deleteorient T2_orig_fslreo.nii.gz
+# Cambiar dimension voxeles de la sequencia de RESTING STATE (rsFMRI)
+# Voxel size (x10)
+ls */*rsfMRI_*E?.nii.gz | parallel fslchpixdim  {} 1.17 1.17 12
 
-# Invierte la orietacion x,y
-fslswapdim T2_orig_fslreo.nii.gz -x z -y T2_orig_fslreo_swap.nii.gz
+### BET Estructural T2 
+# Reorienta los sujetos con respecto que al atlas
+ls */*_T2_Turbo*E?.nii.gz | cut -d . -f 1 | parallel fslswapdim {} x y z {}_sw
 
-# Coloca las nuevas etiquetas
-fslorient -setqformcode 1 T2_orig_fslreo_swap.nii.gz
-```
-  
-## 2. Recorte de los volumenes  
-Hay que tratar de automatizar esto en `mrat_crop`.
-``` bash
-# Esto es un ejemplo
-fslroi T2_rata_AnaKaren_reo_1.nii.gz crop.nii.gz 85 199 0 19 117 151 0 1
+# Extraer cerebro
+for i in $(ls */*T2_Turbo*_sw.nii.gz);do
+	echo $i; 
+	fslchpixdim  $i 1.17 1.17 6
+	j=$(echo $i | cut -d . -f 1);
+	center=$(cluster -i $i -t 10 | sed -n '2{p;q}' | awk '{print int($7)" "int($8)" "int($9)}');
+
+	bet ${i} ${j}_brain.nii.gz -r 75 -c $center -f 0.3 -g 0.25;
+	#bet ${j}_brain.nii.gz ${j}_brain.nii.gz -r 75 -c $center -f 0.25 -g -0.25;
+
+	fslchpixdim  $i 1.17 1.17 12
+	fslchpixdim ${j}_brain.nii.gz  1.17 1.17 12
+
+done
 ```  
   
 ## 3. Denoise  
@@ -47,12 +50,14 @@ Aquí se pueden utilizar un método basado en *non-local means* y *bias field co
   
   
  # Análisis de las IRM  
- Los siguentes pasos no son necesariamente secuenciales ya qu epueden realizarse a la mismo tiempo. Sin embargo es necesario que ambos pasos estes realizados para realizar cuantificaciones volumétricas de las lesiones y cambios pre/post.
+ Los siguentes pasos no son necesariamente secuenciales ya que pueden realizarse a la mismo tiempo. Sin embargo, se necesitan que ambos pasos para realizar cuantificaciones volumétricas de las lesiones y cambios pre/post.
 
 ## Segmentacion manual de las lesiones  
 Se recomienda utilizar el programa [`mrtrix`](http://www.mrtrix.org/) con su visualizador [`mrview`](http://mrtrix.readthedocs.io/en/latest/reference/commands/mrview.html?highlight=mrview) para realizar ROIS manuales.  
 NOTA: La segmentación debe ser realizada por la misma persona para mantener la variabilidad usuario-dependiente.  
-  
+
+Segmentación manual con el programa ITKskap. Se utilzan etiquetas independientes para cada estructura lesionada. Se obtienen las matrices con la segmentación y se cuantifica el volumen. 
+
 ## Corregistro no lineal  
 Aquí hay que llevar las imagenes ya procesadas al atlas. En el caso de que se cuente con volúmenes pre y post lesion hay que llevar la imagen de post-lesion a la pre y la pre al espacio del altas.  
 Programas recomendados: [Advance Normalization Tools ANTs](https://stnava.github.io/ANTs/), [FSL](https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FSL).  
