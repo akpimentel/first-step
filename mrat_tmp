@@ -1,5 +1,22 @@
 #!/bin/bash
 #  FUNCTION: PRINT COLOR COMMAND
+#
+#
+help() {
+echo -e " 
+Uso:
+
+\033[38;5;141m`basename $0`\033[0m  \033[38;5;197m NIFTI_T2.nii.gz \033[0m
+
+1. Copia el archivo original
+2. Cambia la resolución de los voxeles x10
+3. Calcula en centroide de la imagen y genera una mascara binaria basada en él.
+4. Aplica limpieza de ruido con non-local means de PIerrick coupe.
+5. Biasfield correction de ANTs
+"
+}
+
+
 cmd() {
 text=$1
 echo -e "\033[38;5;130mCOMANDO -->\033[0m \033[38;5;39m$text\033[0m"
@@ -23,7 +40,7 @@ mri=${id}_copia.nii.gz
 brain=${id}_brain.nii.gz
 
 # Number of inputs
-if [ "$#" -lt 1 ]; then Error "No hay argumentos"; exit 0; fi
+if [ "$#" -lt 1 ]; then Error "No hay argumentos"; help; exit 0; fi
 
 
 echo -e "\033[48;5;39m\n[INIT]..... Modifica el tamaño de los voxeles, identifica el centro y crea una máscara binaria de $1 \n\033[0m"
@@ -39,7 +56,7 @@ center=$(cluster -i $mri -t 10 | sed -n '2{p;q}' | awk '{print int($7)" "int($8)
 echo $center
 
 Info "Estima una mascara binaria del cerebro y corta"
-cmd "bet $mri $brain -r 75 -c $center -f 0.3 -g 0.25"
+cmd "bet $mri $brain -r 75 -c $center -f 0.15 -g 0.25"
 
 # Por qué remuestrea x20 una dimensión???
 #cmd "cp $brain tmp_mask.nii.gz"
