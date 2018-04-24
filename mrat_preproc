@@ -4,9 +4,7 @@
 #
 help() {
 echo -e " 
-Uso:
-
-\033[38;5;141m`basename $0`\033[0m  \033[38;5;197m NIFTI_T2.nii.gz \033[0m
+Uso:   \033[38;5;141m`basename $0`\033[0m  \033[38;5;197m NIFTI_T2.nii.gz \033[0m
 
 1. Copia el archivo original
 2. Cambia la resolución de los voxeles x10
