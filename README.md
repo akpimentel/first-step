@@ -10,8 +10,8 @@ En este repositorio vamos a guardar los pasos así como los scripts necesarios p
 > - Papp, E. A., Leergaard, T. B., Calabrese, E., Johnson, G. A., & Bjaalie, J. G. (2014). Waxholm Space atlas of the Sprague Dawley rat brain. NeuroImage, 97, 374-386, [DOI: j.neuroimage.2014.04.001](https://doi.org/10.1016/j.neuroimage.2014.04.001).  
 
 # Contenido  
-1. [Preprocesamiento Estructural](#preprocesamiento-estructural:-`mrat_preproc`)
-1. [Segmentacion manual de las lesiones y volumetría](#segmentacion-manual-de-las-lesiones-y-volumetria:-`countroi.r`)
+1. [Preprocesamiento Estructural](#preprocesamiento-estructural)
+1. [Segmentacion manual de las lesiones y volumetría](#segmentacion-manual-de-las-lesiones-y-volumetria)
 1. [Corregistro no lineal a Atlas](#corregistro-no-lineal-a-atlas)
 1. [Pendientes](#pendientes)
 
