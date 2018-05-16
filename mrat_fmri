@@ -1,0 +1,164 @@
+#!/bin/bash
+#  FUNCTION: PRINT COLOR COMMAND
+#
+#
+help() {
+echo -e " 
+Uso:   \033[38;5;141m`basename $0`\033[0m  \033[38;5;197mfMRI.nii.gz\033[0m  \033[38;5;197mout\033[0m  \033[38;5;197mN\033[0m
+
+	\033[38;5;197mNIFTI\033[0m	Es el archivo NIFTI al que se le aplicaran el procesamiento.
+	\033[38;5;197mout\033[0m	Es el Nombre de salida.
+	\033[38;5;197mN\033[0m	Es el factor por el que se multiplicaran los voxeles (por ejemplo 10).
+
+1. Copia el archivo original
+2. Cambia la resolución de los voxeles x10
+3. Calcula en centroide de la imagen y genera una mascara binaria basada en él.
+5. Times series correction
+6. Corrección de movimiento
+4. Calcula la media de todos los volumenes
+"
+}
+
+
+cmd() {
+text=$1
+echo -e "\033[38;5;130mCOMANDO -->\033[0m \033[38;5;39m$text\033[0m"
+eval $text
+}
+#  FUNCTION: PRINT INFO
+Info() {
+Col="38;5;129m" # Color code 
+echo  -e "\033[$Col\n[INFO]..... $1 \033[0m"
+}
+#  FUNCTION: PRINT ERROR
+Error() {
+echo -e "\e[0;31m\n[ERROR]..... $1\n\e[0m"
+}
+
+# --------------------------------------------------------------------------------
+orig=$1
+out=$2
+N=$3
+
+id=`echo $out | awk -F "." '{print $1}'`
+mri=${id}.nii.gz
+mask=${id}_mask.nii.gz
+
+# Number of inputs
+if [ "$#" -lt 3 ]; then Error "Falta un argumento"; help; exit 0; fi
+
+
+echo -e "\033[48;5;39m\n[INIT]..... Modifica el tamaño de los voxeles, identifica el centro y crea una máscara binaria de $1 \n\033[0m"
+
+Vox=`mrinfo -vox $orig`
+X=`echo $Vox | awk -v n="$N" -F " " '{print $1}'`
+Y=`echo $Vox | awk -v n="$N" -F " " '{print $2}'`
+Z=`echo $Vox | awk -v n="$N" -F " " '{print $3}'`
+Info "Reorienta de Acuerdo a la vista estandar de (${Vox}) a (${X} ${Z} ${Y})"
+cmd "mrconvert -stride -1,2,3,4 -vox ${X},${Z},${Y} -axes 0,2,1,3 $orig $mri"
+
+Info "Cambiar el tamaño de los Voxeles ($Vox) x $N"
+X=`echo print $X*$N | perl`
+Y=`echo print $Y*$N | perl`
+Z=`echo print $Z*$N | perl`
+cmd "fslchpixdim  $mri $X $Z $Y"
+
+Info "El centro de $mri es:"
+center=$(cluster -i $mri -t 10 | sed -n '2{p;q}' | awk '{print int($7)" "int($8)" "int($9)}');
+echo $center
+
+Info "Estima una mascara binaria del cerebro y corta"
+cmd "bet $mri $id -r 75 -c $center -f 0.25 -g 0.25 -m -n"
+
+# Por qué remuestrea x20 una dimensión???
+#cmd "cp $brain tmp_mask.nii.gz"
+#cmd "cp $mri tmp_${id}.nii.gz"
+#bet ${j}_brain.nii.gz ${j}_brain.nii.gz -r 75 -c $center -f 0.25 -g -0.25;
+#Info "Cambia de nuevo el tamaño de los voxeles de $mri y de"
+#cmd "fslchpixdim  tmp_${id}.nii.gz 0.802139 10 0.802139"
+#cmd "fslchpixdim tmp_mask.nii.gz  0.802139 10 0.802139"
+
+# Registrar a atlas de rata
+ANTs
+# copiar geometria hd del template al warped
+
+
+# Previamente cambiamos nombre y dimension de voxeles (ver arriba)
+# Reorientamos igual que los T2, removemos primeros 5 vols (c), extraemos examplefunc (e) y corregimos intensidad (N)
+ls *_rsfMRI.nii.gz | parallel fslswapdim {} x -z y reor_{}
+ls reor_*_rsfMRI.nii.gz | cut -d . -f 1 | parallel fslroi {} {}_c 5 495
+ls reor_*_rsfMRI.nii.gz | cut -d . -f 1 | parallel fslroi {} {}_e 5 1
+ls reor_*_rsfMRI_e.nii.gz | cut -d . -f 1 | parallel N4BiasFieldCorrection -i {}.nii.gz -o {}N.nii.gz
+ls reor_*_rsfMRI_e.nii.gz | cut -d . -f 1 | parallel fslcpgeom {} {}N
+slicesdir reor_*_rsfMRI_eN.nii.gz
+
+# bet eN YYAAAAAAA
+ls reor_*_rsfMRI_eN.nii.gz | parallel fslchpixdim {} 1.6667 3.5 1.6667
+ls reor_*_rsfMRI_eN.nii.gz | cut -d . -f 1 | parallel bet {} {}_brain -f 0.75
+ls reor_*_rsfMRI_eN* | parallel fslchpixdim {} 1.6667 7 1.6667
+slicesdir -o $(ls -r reor_*_rsfMRI_eN*)
+
+
+# Motion correction
+ls reor_*_rsfMRI_c.nii.gz | cut -d . -f 1 | parallel slicetimer -i {} -o {}st --down -d 2 -r 1 --odd
+ls reor_*_rsfMRI_cst.nii.gz | cut -d . -f 1 | parallel mcflirt -in {} -refvol 0 -plots
+ls *.par | cut -d _ -f 2 | parallel fsl_tsplot -i reor_{}_rsfMRI_cst_mcf.par -t {} -u 1 --start=4 --finish=6 -a x,y,z -w 640 -h 144 -o {}_QC_trans.png;
+ls *.par | cut -d _ -f 2 | parallel fsl_tsplot -i reor_{}_rsfMRI_cst_mcf.par -t {} -u 1 --start=1 --finish=3 -a x,y,z -w 640 -h 144 -o {}_QC_rot.png;
+
+# Corregistrar funcional a estructural (brain)
+for i in $(ls reor_*_rsfMRI_eN_brain.nii.gz); do 
+	bn=$(basename $i .nii.gz);
+	id=$(echo $i | cut -d _ -f 2 | cut -d s -f 1 );
+	T2=$(ls ${id}s*_T23D125um_reorN_brain.nii.gz); 
+	antsRegistrationSyN.sh -d 3 -f $T2 -m $i -o ${bn}_toT2b_ -t r
+done
+
+rm lista_slicesdirfMRItoT2b.txt
+for i in $(ls reor_*_rsfMRI_eN_brain_toT2b_Warped.nii.gz);do echo $i;
+	id=$(echo $i | cut -d _ -f 2 | cut -d s -f 1 );	
+	T2=$(ls ${id}s*_T23D125um_reorN_brain.nii.gz);
+	fslcpgeom $T2 $i;
+	echo $i $T2 >> lista_slicesdirfMRItoT2b.txt;
+done
+slicesdir -o $(cat lista_slicesdirfMRItoT2b.txt)
+
+
+# Llevar al Template
+for i in $(ls reor*_cst_mcf.nii.gz);do
+	echo $i;
+	id=$(echo $i | cut -d _ -f 2)
+	Tid=$(echo $id | cut -c 1-3);
+	T2toT=$(ls ${Tid}*2Template*.mat);
+echo $T2toT
+	antsApplyTransforms -d 3 -e 3 -i reor_${id}_rsfMRI_cst_mcf.nii.gz -o reor_${id}_rsfMRI_cst_mcf_2Template161607.nii.gz -r /mnt/Data/Topillos_MRI/TOPOS-VivosCP/TOPOS_Template3_T23D125um_161607.nii.gz -t $T2toT -t reor_${id}_rsfMRI_eN_brain_toT2b_0GenericAffine.mat
+done
+
+# aCompCor (corrige ruido fisiológicos)
+ls *mcf_2Template161607* | cut -d _ -f 2 | parallel fslmeants -i reor_{}_rsfMRI_cst_mcf_2Template161607.nii.gz -o reor_{}_rsfMRI_cst_mcf_2Template161607_aCompCor.txt -m /mnt/Data/Topillos_MRI/TOPOS-VivosCP/TOPOS_Template3_T23D125um_brain_CSFWMmask_161607.nii.gz --eig --order=5;
+
+# fsl-glm ()
+ls *rsfMRI_*mcf_2Template161607.nii.gz | cut -d _ -f 2 | parallel fsl_glm -i reor_{}_rsfMRI_cst_mcf_2Template161607.nii.gz -m /mnt/Data/Topillos_MRI/TOPOS-VivosCP/TOPOS_Template3_T23D125um_brain_mask_161607.nii.gz -d reor_{}_rsfMRI_cst_mcf_2Template161607_aCompCor.txt --demean --out_res={}_4Dres_Template161607.nii.gz;
+
+ls *_4Dres_Template161607.nii.gz | cut -d _ -f 1 | parallel fsl_glm -i {}_4Dres_Template161607.nii.gz -m /mnt/Data/Topillos_MRI/TOPOS-VivosCP/TOPOS_Template3_T23D125um_brain_mask_161607.nii.gz -d reor_{}_rsfMRI_cst_mcf.par --demean --out_res={}_4Dres_Template161607.nii.gz;
+
+# time filtering
+	TR=2;
+	hpf=0.01;
+	lpf=0.1;
+	hp_sigma=`echo "scale=2 ;(1/${hpf})/2.35/${TR}" | bc`; # In volumes for fslmaths
+	lp_sigma=`echo "scale=2 ;(1/${lpf})/2.35/${TR}" | bc`; # In volumes for fslmaths
+
+ls *_4Dres_Template161607.nii.gz | cut -d _ -f 1 | parallel fslmaths {}_4Dres_Template161607.nii.gz -bptf $hp_sigma $lp_sigma ppBOLD_{}_Template161607.nii.gz
+
+#ls reor_*_rsfMRI_cst_mcf_2Template161607.nii.gz | cut -d _ -f 2 | parallel fslmaths reor_{}_rsfMRI_cst_mcf_2Template161607.nii.gz -bptf $hp_sigma $lp_sigma ppBOLD_{}_Template161607.nii.gz
+# smooth 
+# ls ppB* | cut -d _ -f 2 | parallel fslmaths ppBOLD_{}_Template161607.nii.gz -ing 10000 -s 1.7 ppBOLD_{}_Template161607
+
+ls ppB* | cut -d _ -f 2 | parallel fslmaths ppBOLD_{}_Template161607.nii.gz -ing 10000 -kernel boxv3 5 3 5 -fmean ppBOLD_{}_Template161607
+
+
+Info "Borra los Temporales"
+#cmd "rm $brain $mri"
+
+
+
