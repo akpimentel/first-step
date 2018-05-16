@@ -4,7 +4,10 @@
 #
 help() {
 echo -e " 
-Uso:   \033[38;5;141m`basename $0`\033[0m  \033[38;5;197m NIFTI_T2.nii.gz \033[0m
+Uso:   \033[38;5;141m`basename $0`\033[0m  \033[38;5;197m NIFTI_T2.nii.gz \033[0m \033[38;5;197m N \033[0m
+
+	\033[38;5;197mNIFTI\033[0m	Es el archivo NIFTI al que se le aplicaran las funciones.
+	\033[38;5;197mN\033[0m	Es el factor por el que se multiplicaran los voxeles (por ejemplo 10).
 
 1. Copia el archivo original
 2. Cambia la resolución de los voxeles x10
@@ -32,13 +35,14 @@ echo -e "\e[0;31m\n[ERROR]..... $1\n\e[0m"
 
 # --------------------------------------------------------------------------------
 orig=$1
+N=$2
 
 id=`echo $orig | awk -F "." '{print $1}'`
 mri=${id}_copia.nii.gz
 brain=${id}_brain.nii.gz
 
 # Number of inputs
-if [ "$#" -lt 1 ]; then Error "No hay argumentos"; help; exit 0; fi
+if [ "$#" -lt 2 ]; then Error "Falta un argumento"; help; exit 0; fi
 
 
 echo -e "\033[48;5;39m\n[INIT]..... Modifica el tamaño de los voxeles, identifica el centro y crea una máscara binaria de $1 \n\033[0m"
@@ -46,8 +50,12 @@ echo -e "\033[48;5;39m\n[INIT]..... Modifica el tamaño de los voxeles, identifi
 Info "Creando una copia del archivo original"
 cmd "cp $orig $mri"
 
-Info "Cambiar el tamaño de los Voxeles x 10"
-cmd "fslchpixdim  $mri 0.802139 0.802139 5"
+Vox=`mrinfo -vox $mri`
+X=`echo $Vox | awk -v n="$N" -F " " '{print $1*n}'`
+Y=`echo $Vox | awk -v n="$N" -F " " '{print $2*n}'`
+Z=`echo $Vox | awk -v n="$N" -F " " '{print $3*n}'`
+Info "Cambiar el tamaño de los Voxeles ($Vox) x $N"
+cmd "fslchpixdim  $mri $X $Y $Z"
 
 Info "El centro de $mri es:"
 center=$(cluster -i $mri -t 10 | sed -n '2{p;q}' | awk '{print int($7)" "int($8)" "int($9)}');
@@ -72,4 +80,7 @@ fslmaths ${id}_dn4.nii.gz -bin ${id}_mask.nii.gz
 
 Info "Borra los archivos innecesarios"
 cmd "rm $brain $mri"
+
+Info "Para ciertas adquisiciones quiza es necesario rotar el eje-Z:"
+echo "mrtransform -flip 2 ${id}_mask.nii.gz ${id}_mask_Z.nii.gz"
 
