@@ -68,7 +68,7 @@ center=$(cluster -i $mri -t 10 | sed -n '2{p;q}' | awk '{print int($7)" "int($8)
 echo $center
 
 Info "Estima una mascara binaria del cerebro y corta"
-cmd "bet $mri $id -r 75 -c $center -f 0.25 -g 0.25 -m -n"
+cmd "bet $mri $id -r 75 -c $center -f 0.4 -g 0.2 -m -n"
 
 # Por qué remuestrea x20 una dimensión???
 #cmd "cp $brain tmp_mask.nii.gz"
