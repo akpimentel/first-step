@@ -9,13 +9,19 @@ Uso:   \033[38;5;141m`basename $0`\033[0m  \033[38;5;197m NIFTI_T2.nii.gz \033[0
 	\033[38;5;197mNIFTI\033[0m	Es el archivo NIFTI al que se le aplicaran las funciones.
 	\033[38;5;197mN\033[0m	Es el factor por el que se multiplicaran los voxeles (por ejemplo 10).
 
+\033[38;5;141mPasos que realiza: \033[0m
 1. Copia el archivo original
 2. Cambia la resolución de los voxeles x10
 3. Calcula en centroide de la imagen y genera una mascara binaria basada en él.
 4. Aplica limpieza de ruido con non-local means de PIerrick coupe.
 5. Biasfield correction de ANTs
+
+\033[38;5;14mNOTA: ¡¡¡REQUIERE DE mrtrix3 o más para funcionar!!!\033[0m
+De lo contrario habrá un error en las dimensiones del NIFTI de salida
+
 "
 }
+
 
 
 cmd() {

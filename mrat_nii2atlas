@@ -29,8 +29,16 @@ rm -rf slicesdir_BET; mv slicesdir/ slicesdir_BET
 ### T2 brain to ATLAS
 
 atlasbrain=/mnt/Data/RAT_fMRI/Templates_Rat/TohokuUniv/brain.nii;
-# T2brain al atlas
-ls */*_T2_Turbo*brain.nii.gz | cut -d . -f 1 | parallel flirt -in {} -ref $atlasbrain -out {}_2TohokuA -omat {}_2TohokuA.mat -bins 256 -cost corratio -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 12  -interp trilinear;
+
+# T2brain al atlas con fsl
+flirt -in {} -ref $atlasbrain -out {}_2TohokuA -omat {}_2TohokuA.mat -bins 256 -cost corratio -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 12  -interp trilinear
+
+# T2brain al atlas con ANTs
+antsRegistrationSyN.sh -d 3 -f /mnt/Data/Topillos_MRI/TOPOS-VivosCP/TOPOS_Template3_T23D125um_brain.nii.gz -m {}.nii.gz -o {}_2Template -t a
+
+# Copia geometria
+fslcpgeom /mnt/Data/Topillos_MRI/TOPOS-VivosCP/TOPOS_Template3_T23D125um_brain.nii.gz {}
+slicesdir -p $Template_brain *_reorN_brain_2TemplateWarped.nii.gz
 
 # Checar corregistros al atlas
 slicesdir -p /mnt/Data/RAT_fMRI/Templates_Rat/TohokuUniv/brain.nii.gz $(ls */*_2TohokuA.nii.gz)
