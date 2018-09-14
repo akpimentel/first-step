@@ -1,0 +1,204 @@
+
+############### Convertir datos ################################
+
+cd /misc/cannabis/alcauter/MatingTopillos
+# ls -d /misc/bruker/nmrsu/*Mating* >> lista_bruker_20180409.txt
+
+for i in $(cat lista_bruker_PorHacer.txt); do 
+echo $i; j=$(basename $i); 
+mkdir -p NII_${j}; 
+/mnt/Data/Software/mricron_lx/dcm2nii -d -e -o NII_${j} $i;
+done
+
+# Copiar datos a carpeta de Analisis
+mkdir Analisis_NII
+for i in $(ls -d NII*);do echo $i;id=$(echo $i | cut -d _ -f 5);for r in $(ls ${i}/SEEPIsat*gz);do bn=$(basename $r);cp $r Analisis_NII/${id}_${bn};done;done
+for i in $(ls -d NII*);do echo $i;id=$(echo $i | cut -d _ -f 5);for r in $(ls ${i}/T2TurboRARE3D125umisotropicSarael*gz);do bn=$(basename $r);cp $r Analisis_NII/${id}_${bn};done;done
+
+
+#################### ANALISIS #################################
+
+# Cambiar nombres
+cd /misc/cannabis/alcauter/MatingTopillos/Analisis_NII
+for i in $(ls *SEEPI*);do echo $i; j=$(echo $i | cut -d _ -f 1);mv $i  ${j}_rsfMRI.nii.gz;done
+for i in $(ls *T2Turbo*);do echo $i; j=$(echo $i | cut -d _ -f 1);mv $i  ${j}_T23D125um.nii.gz;done
+
+# Redimensionamos voxeles
+ls *T2*gz | parallel fslchpixdim {} 1.25 1.25 1.25
+ls *_rsfMRI*gz | parallel fslchpixdim {} 1.6667 1.6667 7
+
+Template=/mnt/Data/Topillos_MRI/TOPOS-VivosCP/TOPOS_Template3_T23D125um.nii.gz
+Template_brain=/mnt/Data/Topillos_MRI/TOPOS-VivosCP/TOPOS_Template3_T23D125um_brain.nii.gz
+
+# Reorientamos 
+mkdir temporal
+mv F04s01_T23D125um.nii.gz temporal/
+ls *_T23D125um.nii.gz | cut -d . -f 1 | parallel fslswapdim {} -x -y z {}_reor
+mv temporal/F04s01_T23D125um.nii.gz .
+cp F04s01_T23D125um.nii.gz F04s01_T23D125um_reor.nii.gz
+
+# Corregir Intensidad
+ls *T23D125um_reor.nii.gz | cut -d . -f 1 | parallel N4BiasFieldCorrection -i {}.nii.gz -s 3 -b 60 -t [0.5,0.01,50] -o {}N.nii.gz
+ls *T23D125um_reor.nii.gz | cut -d . -f 1 | parallel fslcpgeom {} {}N  
+
+# Bet
+for i in $(ls *T23D125um_reorN.nii.gz); do echo $i;
+	j=$(basename $i .nii.gz);
+	fslchpixdim $i 2.5 1.25 2.5
+	bet $i ${j}_brain -f 0.7
+done
+ls *T23D125um_reorN.nii.gz | parallel fslchpixdim {} 1.25 1.25 1.25
+ls *T23D125um_reorN_brain.nii.gz | parallel fslchpixdim {} 1.25 1.25 1.25
+slicesdir -o $(ls -r *reorN*)
+
+# Corregistro T2brain al Template
+ls *T23D125um_reorN_brain.nii.gz | cut -d . -f 1 | parallel antsRegistrationSyN.sh -d 3 -f /mnt/Data/Topillos_MRI/TOPOS-VivosCP/TOPOS_Template3_T23D125um_brain.nii.gz -m {}.nii.gz -o {}_2Template -t a
+ls *_2TemplateWarped.nii.gz | cut -d . -f 1 | parallel fslcpgeom /mnt/Data/Topillos_MRI/TOPOS-VivosCP/TOPOS_Template3_T23D125um_brain.nii.gz {}
+slicesdir -p $Template_brain *_reorN_brain_2TemplateWarped.nii.gz
+
+
+##### Procesar rsfMRI data ###############################################################
+
+# Previamente cambiamos nombre y dimension de voxeles (ver arriba)
+# Reorientamos igual que los T2, removemos primeros 5 vols (c), extraemos examplefunc (e) y corregimos intensidad (N)
+ls *_rsfMRI.nii.gz | parallel fslswapdim {} x -z y reor_{}
+ls reor_*_rsfMRI.nii.gz | cut -d . -f 1 | parallel fslroi {} {}_c 5 495
+ls reor_*_rsfMRI.nii.gz | cut -d . -f 1 | parallel fslroi {} {}_e 5 1
+ls reor_*_rsfMRI_e.nii.gz | cut -d . -f 1 | parallel N4BiasFieldCorrection -i {}.nii.gz -o {}N.nii.gz
+ls reor_*_rsfMRI_e.nii.gz | cut -d . -f 1 | parallel fslcpgeom {} {}N
+slicesdir reor_*_rsfMRI_eN.nii.gz
+
+# bet eN
+ls reor_*_rsfMRI_eN.nii.gz | parallel fslchpixdim {} 1.6667 3.5 1.6667
+ls reor_*_rsfMRI_eN.nii.gz | cut -d . -f 1 | parallel bet {} {}_brain -f 0.75
+ls reor_*_rsfMRI_eN* | parallel fslchpixdim {} 1.6667 7 1.6667
+slicesdir -o $(ls -r reor_*_rsfMRI_eN*)
+
+
+# Motion correction
+ls reor_*_rsfMRI_c.nii.gz | cut -d . -f 1 | parallel slicetimer -i {} -o {}st --down -d 2 -r 1.2 --odd
+ls reor_*_rsfMRI_cst.nii.gz | cut -d . -f 1 | parallel mcflirt -in {} -refvol 0 -plots
+ls *.par | cut -d _ -f 2 | parallel fsl_tsplot -i reor_{}_rsfMRI_cst_mcf.par -t {} -u 1 --start=4 --finish=6 -a x,y,z -w 640 -h 144 -o {}_QC_trans.png;
+ls *.par | cut -d _ -f 2 | parallel fsl_tsplot -i reor_{}_rsfMRI_cst_mcf.par -t {} -u 1 --start=1 --finish=3 -a x,y,z -w 640 -h 144 -o {}_QC_rot.png;
+
+# Corregistrar funcional a estructural (brain)
+for i in $(ls reor_*_rsfMRI_eN_brain.nii.gz); do 
+	bn=$(basename $i .nii.gz);
+	id=$(echo $i | cut -d _ -f 2 | cut -d s -f 1 );
+	T2=$(ls ${id}s*_T23D125um_reorN_brain.nii.gz); 
+	antsRegistrationSyN.sh -d 3 -f $T2 -m $i -o ${bn}_toT2b_ -t r
+done
+
+rm lista_slicesdirfMRItoT2b.txt
+for i in $(ls reor_*_rsfMRI_eN_brain_toT2b_Warped.nii.gz);do echo $i;
+	id=$(echo $i | cut -d _ -f 2 | cut -d s -f 1 );	
+	T2=$(ls ${id}s*_T23D125um_reorN_brain.nii.gz);
+	fslcpgeom $T2 $i;
+	echo $i $T2 >> lista_slicesdirfMRItoT2b.txt;
+done
+slicesdir -o $(cat lista_slicesdirfMRItoT2b.txt)
+
+#### CORREGIR sujetos ### funciono para M04s01 F01s01 F05s01
+
+for i in M04s01 M04s02 M01s01 F01s01 F05s01; do echo $i >> lista_CorregirCorr_eFtoT2b.txt;done
+
+cat lista_CorregirCorr_eFtoT2b.txt | parallel N4BiasFieldCorrection -i reor_{}_rsfMRI_e.nii.gz -s 3 -b 60 -t [0.5,0.01,50] -o reor_{}_rsfMRI_eN.nii.gz
+cat lista_CorregirCorr_eFtoT2b.txt | parallel fslcpgeom reor_{}_rsfMRI_e.nii.gz reor_{}_rsfMRI_eN.nii.gz
+cat lista_CorregirCorr_eFtoT2b.txt | parallel fslchpixdim reor_{}_rsfMRI_eN.nii.gz 1.6667 3.5 1.6667
+cat lista_CorregirCorr_eFtoT2b.txt | parallel bet reor_{}_rsfMRI_eN.nii.gz reor_{}_rsfMRI_eN_brain.nii.gz -f 0.7
+cat lista_CorregirCorr_eFtoT2b.txt | parallel fslchpixdim reor_{}_rsfMRI_eN.nii.gz 1.6667 7 1.6667
+cat lista_CorregirCorr_eFtoT2b.txt | parallel fslchpixdim reor_{}_rsfMRI_eN_brain.nii.gz 1.6667 7 1.6667
+cat lista_CorregirCorr_eFtoT2b.txt | parallel echo reor_{}_rsfMRI_eN.nii.gz reor_{}_rsfMRI_eN_brain.nii.gz >> lista_test.txt
+slicesdir -o $(cat lista_test.txt)
+
+for x in $(cat lista_CorregirCorr_eFtoT2b.txt);do 
+	i=reor_${x}_rsfMRI_eN_brain.nii.gz 
+	bn=$(basename $i .nii.gz);
+	id=$(echo $i | cut -d _ -f 2 | cut -d s -f 1 );
+	T2=$(ls ${id}s*_T23D125um_reorN_brain.nii.gz); 
+	antsRegistrationSyN.sh -d 3 -f $T2 -m $i -o ${bn}_toT2b_ -t r
+done
+
+### CORREGIR sujetos M01s01 M04s02 ###
+
+rm lista_CorregirCorr_eFtoT2b.txt
+for i in M01s01 M04s02; do echo $i >> lista_CorregirCorr_eFtoT2b.txt;done
+
+cat lista_CorregirCorr_eFtoT2b.txt | parallel fslchpixdim reor_{}_rsfMRI_eN.nii.gz 1.6667 3.5 1.6667
+cat lista_CorregirCorr_eFtoT2b.txt | parallel bet reor_{}_rsfMRI_eN.nii.gz reor_{}_rsfMRI_eN_brain.nii.gz -f 0.7 -g -0.9
+cat lista_CorregirCorr_eFtoT2b.txt | parallel fslchpixdim reor_{}_rsfMRI_eN.nii.gz 1.6667 7 1.6667
+cat lista_CorregirCorr_eFtoT2b.txt | parallel fslchpixdim reor_{}_rsfMRI_eN_brain.nii.gz 1.6667 7 1.6667
+rm lista_test.txt
+cat lista_CorregirCorr_eFtoT2b.txt | parallel echo reor_{}_rsfMRI_eN.nii.gz reor_{}_rsfMRI_eN_brain.nii.gz >> lista_test.txt
+slicesdir -o $(cat lista_test.txt)
+
+fslview M01s02_T23D125um_reorN_brain.nii.gz
+fslmaths M01s02_T23D125um_reorN_brain.nii.gz -roi 0 -1 0 96 0 -1 0 -1 mask_M01s01
+antsRegistrationSyN.sh -d 3 -f mask_M01s01.nii.gz -m reor_M01s01_rsfMRI_eN.nii.gz -o reor_M01s01_rsfMRI_eN_brain_toT2b_ -t r
+
+fslview M04s03_T23D125um_reorN_brain.nii.gz
+fslmaths M04s03_T23D125um_reorN_brain.nii.gz -roi 0 -1 0 105 0 -1 0 -1 mask_M04s03
+antsRegistrationSyN.sh -d 3 -f mask_M04s03.nii.gz -m reor_M04s02_rsfMRI_eN.nii.gz -o reor_M04s02_rsfMRI_eN_brain_toT2b_ -t r
+
+# Llevar al Template
+for i in $(ls reor*_cst_mcf.nii.gz);do
+	echo $i;
+	id=$(echo $i | cut -d _ -f 2)
+	Tid=$(echo $id | cut -c 1-3);
+	T2toT=$(ls ${Tid}*2Template*.mat);
+echo $T2toT
+	antsApplyTransforms -d 3 -e 3 -i reor_${id}_rsfMRI_cst_mcf.nii.gz -o reor_${id}_rsfMRI_cst_mcf_2Template161607.nii.gz -r /mnt/Data/Topillos_MRI/TOPOS-VivosCP/TOPOS_Template3_T23D125um_161607.nii.gz -t $T2toT -t reor_${id}_rsfMRI_eN_brain_toT2b_0GenericAffine.mat
+done
+
+# aCompCor
+ls *mcf_2Template161607* | cut -d _ -f 2 | parallel fslmeants -i reor_{}_rsfMRI_cst_mcf_2Template161607.nii.gz -o reor_{}_rsfMRI_cst_mcf_2Template161607_aCompCor.txt -m /mnt/Data/Topillos_MRI/TOPOS-VivosCP/TOPOS_Template3_T23D125um_brain_CSFWMmask_161607.nii.gz --eig --order=5;
+
+# fsl-glm
+
+ls *rsfMRI_*mcf_2Template161607.nii.gz | cut -d _ -f 2 | parallel fsl_glm -i reor_{}_rsfMRI_cst_mcf_2Template161607.nii.gz -m /mnt/Data/Topillos_MRI/TOPOS-VivosCP/TOPOS_Template3_T23D125um_brain_mask_161607.nii.gz -d reor_{}_rsfMRI_cst_mcf_2Template161607_aCompCor.txt --demean --out_res={}_4Dres_Template161607.nii.gz;
+
+ls *_4Dres_Template161607.nii.gz | cut -d _ -f 1 | parallel fsl_glm -i {}_4Dres_Template161607.nii.gz -m /mnt/Data/Topillos_MRI/TOPOS-VivosCP/TOPOS_Template3_T23D125um_brain_mask_161607.nii.gz -d reor_{}_rsfMRI_cst_mcf.par --demean --out_res={}_4Dres_Template161607.nii.gz;
+
+# time filtering
+	TR=2;
+	hpf=0.01;
+	lpf=0.1;
+	hp_sigma=`echo "scale=2 ;(1/${hpf})/2.35/${TR}" | bc`; # In volumes for fslmaths
+	lp_sigma=`echo "scale=2 ;(1/${lpf})/2.35/${TR}" | bc`; # In volumes for fslmaths
+
+ls *_4Dres_Template161607.nii.gz | cut -d _ -f 1 | parallel fslmaths {}_4Dres_Template161607.nii.gz -bptf $hp_sigma $lp_sigma ppBOLD_{}_Template161607.nii.gz
+
+#ls reor_*_rsfMRI_cst_mcf_2Template161607.nii.gz | cut -d _ -f 2 | parallel fslmaths reor_{}_rsfMRI_cst_mcf_2Template161607.nii.gz -bptf $hp_sigma $lp_sigma ppBOLD_{}_Template161607.nii.gz
+# smooth 
+# ls ppB* | cut -d _ -f 2 | parallel fslmaths ppBOLD_{}_Template161607.nii.gz -ing 10000 -s 1.7 ppBOLD_{}_Template161607
+
+ls ppB* | cut -d _ -f 2 | parallel fslmaths ppBOLD_{}_Template161607.nii.gz -ing 10000 -kernel boxv3 5 3 5 -fmean ppBOLD_{}_Template161607
+
+# -kernel boxv3  <X> <Y> <Z>
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+### MELODIC
+
+cat dims.txt | parallel melodic -i list4melodicTemplate161607.txt -o melodicT161607_{} -m /mnt/Data/Topillos_MRI/TOPOS-VivosCP/TOPOS_Template3_T23D125um_brain_mask_161607.nii.gz -d {} --bgimage=/mnt/Data/Topillos_MRI/TOPOS-VivosCP/TOPOS_Template3_T23D125um_brain_161607.nii.gz --report
+
+melodic -i list4melodicTemplate161607.txt -o melodicT161607_automatic -m /mnt/Data/Topillos_MRI/TOPOS-VivosCP/TOPOS_Template3_T23D125um_brain_mask_161607.nii.gz --bgimage=/mnt/Data/Topillos_MRI/TOPOS-VivosCP/TOPOS_Template3_T23D125um_brain_161607.nii.gz --report
+
+### MELODIC all ordered
+
+cat dims.txt | parallel melodic -i list4melodic_allOrdered.txt -o list4melodic_allOrdered_{} -m /mnt/Data/Topillos_MRI/TOPOS-VivosCP/TOPOS_Template3_T23D125um_brain_mask_161607.nii.gz -d {} --bgimage=/mnt/Data/Topillos_MRI/TOPOS-VivosCP/TOPOS_Template3_T23D125um_brain_161607.nii.gz --report
+
+melodic -i list4melodic_allOrdered.txt -o list4melodic_allOrdered_automatic -m /mnt/Data/Topillos_MRI/TOPOS-VivosCP/TOPOS_Template3_T23D125um_brain_mask_161607.nii.gz --bgimage=/mnt/Data/Topillos_MRI/TOPOS-VivosCP/TOPOS_Template3_T23D125um_brain_161607.nii.gz --report
+
+
+### MELODIC paired s01s02
+
+cat dims.txt | parallel melodic -i list4melodic_paired_s01s02.txt -o melodicT161607_ps01s02_{} -m /mnt/Data/Topillos_MRI/TOPOS-VivosCP/TOPOS_Template3_T23D125um_brain_mask_161607.nii.gz -d {} --bgimage=/mnt/Data/Topillos_MRI/TOPOS-VivosCP/TOPOS_Template3_T23D125um_brain_161607.nii.gz --report
+
+melodic -i list4melodic_paired_s01s02.txt -o melodicT161607_ps01s02_automatic -m /mnt/Data/Topillos_MRI/TOPOS-VivosCP/TOPOS_Template3_T23D125um_brain_mask_161607.nii.gz --bgimage=/mnt/Data/Topillos_MRI/TOPOS-VivosCP/TOPOS_Template3_T23D125um_brain_161607.nii.gz --report
+
+### MELODIC paired s01s03
+
+cat dims.txt | parallel melodic -i list4melodic_paired_s01s03.txt -o melodicT161607_ps01s03_{} -m /mnt/Data/Topillos_MRI/TOPOS-VivosCP/TOPOS_Template3_T23D125um_brain_mask_161607.nii.gz -d {} --bgimage=/mnt/Data/Topillos_MRI/TOPOS-VivosCP/TOPOS_Template3_T23D125um_brain_161607.nii.gz --report
+
+melodic -i list4melodic_paired_s01s03.txt -o melodicT161607_ps01s03_automatic -m /mnt/Data/Topillos_MRI/TOPOS-VivosCP/TOPOS_Template3_T23D125um_brain_mask_161607.nii.gz --bgimage=/mnt/Data/Topillos_MRI/TOPOS-VivosCP/TOPOS_Template3_T23D125um_brain_161607.nii.gz --report
