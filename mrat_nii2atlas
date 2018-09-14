@@ -1,5 +1,12 @@
 #!/bin/bash
 
+#  FUNCTION: PRINT INFO
+Info() {
+Col="38;5;129m" # Color code 
+echo  -e "\033[$Col\n[INFO]..... $1 \033[0m"
+}
+
+# ------------------------------------------------------------------------------------------------------------
 # Voxel size (x10)
 # Cambiar dimension voxeles de la sequencia de RESTING STATE (rsFMRI)
 ls */*rsfMRI_*E?.nii.gz | parallel fslchpixdim  {} 1.17 1.17 12
@@ -26,20 +33,27 @@ done
 slicesdir -o $(ls -r */*Turbo*_sw*gz)
 rm -rf slicesdir_BET; mv slicesdir/ slicesdir_BET
 
+# ------------------------------------------------------------------------------------------------------------
 ### T2 brain to ATLAS
+# NOTE the atlas is resize to 1x1x1 mm² the following command was used for the labels:
+# mrresize cortex.nii.gz -voxel 1,1,1 -interp sinc cortex_1mm_sc.nii.gz
 
-atlasbrain=/mnt/Data/RAT_fMRI/Templates_Rat/TohokuUniv/brain.nii;
+T2_SWI=7_007_SWI_T2star_map_MGE_E7_dn4.nii.gz
+sub=swi_7_007
+template=/mnt/Data/RAT_fMRI/Templates_Rat/TohokuUniv/brain.nii;
 
-# T2brain al atlas con fsl
-flirt -in {} -ref $atlasbrain -out {}_2TohokuA -omat {}_2TohokuA.mat -bins 256 -cost corratio -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 12  -interp trilinear
+Info "Moving $T2_SWI to REFERENCE $template with output name of: $sub"
 
-# T2brain al atlas con ANTs
-antsRegistrationSyN.sh -d 3 -f /mnt/Data/Topillos_MRI/TOPOS-VivosCP/TOPOS_Template3_T23D125um_brain.nii.gz -m {}.nii.gz -o {}_2Template -t a
+# Affine and warp deformation from T2_SWI to Atlas T2
+antsRegistration -d 3 --float 0  -o [${sub}/brain_1mm_to_${sub}_,${sub}/brain_1mm_to_${sub}_Warped.nii.gz]  -n Linear  -w [0.005,0.995]  -u 0  -r [$template,$T2_SWI,1]  -t Rigid[0.1]  -m MI[$template,$T2_SWI,1,32,Regular,0.25]  -c [1000x500x250x100,1e-6,10]  -f 8x4x2x1  -s 3x2x1x0vox  -t Affine[0.1]  -m MI[$template,$T2_SWI,1,32,Regular,0.25]  -c [1000x500x250x100,1e-6,10]  -f 8x4x2x1  -s 3x2x1x0vox -t SyN[0.1,3,0]  -m CC[$template,$T2_SWI,1,4]  -c [100x70x50x20,1e-6,10]  -f 8x4x2x1  -s 3x2x1x0vox -v 
 
-# Copia geometria
-fslcpgeom /mnt/Data/Topillos_MRI/TOPOS-VivosCP/TOPOS_Template3_T23D125um_brain.nii.gz {}
-slicesdir -p $Template_brain *_reorN_brain_2TemplateWarped.nii.gz
+# Inverser transformations for Atlas_labels to Native space
+WarpImageMultiTransform 3 ../cortex_1mm.nii.gz 7_003_labels_warped.nii.gz -i brain_1mm_to_swi_7_007_0GenericAffine.mat brain_1mm_to_swi_7_007_1InverseWarp.nii.gz -R ../7_007_SWI_T2star_map_MGE_E7_dn4.nii.gz --use-NN
 
+# Thresholds the cortex
+fslmaths 7_003_labels_warped.nii.gz -bin -mul ../7_007_SWI_T2star_map_MGE_E7_dn4.nii.gz 7_007_SWI_T2star_cortex.nii.gz
+
+# ------------------------------------------------------------------------------------------------------------
 # Checar corregistros al atlas
 slicesdir -p /mnt/Data/RAT_fMRI/Templates_Rat/TohokuUniv/brain.nii.gz $(ls */*_2TohokuA.nii.gz)
 rm -rf slicesdir_T2toAtlas; mv slicesdir/ slicesdir_T2toAtlas
