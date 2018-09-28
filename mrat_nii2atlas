@@ -1,5 +1,5 @@
 #!/bin/bash
-
+#
 #  FUNCTION: PRINT INFO
 Info() {
 Col="38;5;129m" # Color code 
@@ -33,27 +33,32 @@ done
 slicesdir -o $(ls -r */*Turbo*_sw*gz)
 rm -rf slicesdir_BET; mv slicesdir/ slicesdir_BET
 
-# ------------------------------------------------------------------------------------------------------------
-### T2 brain to ATLAS
+#------------------------------------------------------------------------------#
+# 			REGISTRATION TO ATLAS
+nii=$1
+out=$2
+template=/misc/ernst/rcruces/database/atlas/Tohoku_1mm/brain_1mm.nii.gz
+labels=/misc/ernst/rcruces/database/atlas/Tohoku_1mm/labels_1mm.nii.gz
+sub=AntsReg
+mkdir $sub
+# NOTE the atlas is resize to 1x1x1 mm² the following command was used for the labels:
+# mrresize cortex.nii.gz -voxel 1,1,1 -interp nearest cortex_1mm.nii.gz
+# Valdes Hernandez, P. A., Sumiyoshi, A., Nonaka, H., Haga, R., Aubert Vasquez, E., Ogawa, T., ... & Kawashima, R. (2011). An in vivo MRI template set for morphometry, tissue segmentation, and fMRI localization in rats. Frontiers in neuroinformatics, 5, 26.
+# Papp, E. A., Leergaard, T. B., Calabrese, E., Johnson, G. A., & Bjaalie, J. G. (2014). Waxholm Space atlas of the Sprague Dawley rat brain. Neuroimage, 97, 374-386.
 # NOTE the atlas is resize to 1x1x1 mm² the following command was used for the labels:
 # mrresize cortex.nii.gz -voxel 1,1,1 -interp sinc cortex_1mm_sc.nii.gz
 
-T2_SWI=7_007_SWI_T2star_map_MGE_E7_dn4.nii.gz
-sub=swi_7_007
-template=/mnt/Data/RAT_fMRI/Templates_Rat/TohokuUniv/brain.nii;
 
-Info "Moving $T2_SWI to REFERENCE $template with output name of: $sub"
+Info "Registering $nii to Tohoku-University Atlas 1x1x1mm, with output name of: $out"
 
 # Affine and warp deformation from T2_SWI to Atlas T2
-antsRegistration -d 3 --float 0  -o [${sub}/brain_1mm_to_${sub}_,${sub}/brain_1mm_to_${sub}_Warped.nii.gz]  -n Linear  -w [0.005,0.995]  -u 0  -r [$template,$T2_SWI,1]  -t Rigid[0.1]  -m MI[$template,$T2_SWI,1,32,Regular,0.25]  -c [1000x500x250x100,1e-6,10]  -f 8x4x2x1  -s 3x2x1x0vox  -t Affine[0.1]  -m MI[$template,$T2_SWI,1,32,Regular,0.25]  -c [1000x500x250x100,1e-6,10]  -f 8x4x2x1  -s 3x2x1x0vox -t SyN[0.1,3,0]  -m CC[$template,$T2_SWI,1,4]  -c [100x70x50x20,1e-6,10]  -f 8x4x2x1  -s 3x2x1x0vox -v 
+antsRegistration -d 3 --float 0  -o [${sub}/${out},${sub}/${out}_Warped.nii.gz]  -n Linear  -w [0.005,0.995]  -u 0  -r [$template,$nii,1]  -t Rigid[0.1]  -m MI[$template,$nii,1,32,Regular,0.25]  -c [1000x500x250x100,1e-6,10]  -f 8x4x2x1  -s 3x2x1x0vox  -t Affine[0.1]  -m MI[$template,$nii,1,32,Regular,0.25]  -c [1000x500x250x100,1e-6,10]  -f 8x4x2x1  -s 3x2x1x0vox -t SyN[0.1,3,0]  -m CC[$template,$outnii,1,4]  -c [100x70x50x20,1e-6,10]  -f 8x4x2x1  -s 3x2x1x0vox -v 
 
-# Inverser transformations for Atlas_labels to Native space
-WarpImageMultiTransform 3 ../cortex_1mm.nii.gz 7_003_labels_warped.nii.gz -i brain_1mm_to_swi_7_007_0GenericAffine.mat brain_1mm_to_swi_7_007_1InverseWarp.nii.gz -R ../7_007_SWI_T2star_map_MGE_E7_dn4.nii.gz --use-NN
+Info "Applying inverse transformations to the labels"
+cmd "WarpImageMultiTransform 3 $template ${out}_labels_warped.nii.gz -i ${sub}/${out}_0GenericAffine.mat ${sub}/${out}_1InverseWarp.nii.gz -R $outnii --use-NN"
 
-# Thresholds the cortex
-fslmaths 7_003_labels_warped.nii.gz -bin -mul ../7_007_SWI_T2star_map_MGE_E7_dn4.nii.gz 7_007_SWI_T2star_cortex.nii.gz
+#------------------------------------------------------------------------------#
+# 			CONTROL DE CALIDAD DEL REGISTRO AL ATLAS
+slicesdir -p $template ${sub}/${out}_Warped.nii.gz
 
-# ------------------------------------------------------------------------------------------------------------
-# Checar corregistros al atlas
-slicesdir -p /mnt/Data/RAT_fMRI/Templates_Rat/TohokuUniv/brain.nii.gz $(ls */*_2TohokuA.nii.gz)
-rm -rf slicesdir_T2toAtlas; mv slicesdir/ slicesdir_T2toAtlas
+
