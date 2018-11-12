@@ -1,7 +1,17 @@
 #!/bin/bash
-#  FUNCTION: PRINT COLOR COMMAND
+#  FUNCTION: Proprocess RAT structural MRI
 #
-#
+# Raúl Rodríguez Cruces
+# raulrcruces@inb.unam.mx
+# Created: 2018
+# Modifications
+# October 17, 2018 the option of mrinfo '-vox' changed to '-spacing'
+# mrinfo -version 3.0_RC3-83-g538f905c 64 bit release version, built Sep 25 2018, using Eigen 3.3.4
+
+
+#--------------------------------------------------------------------------------------------------------------------
+# 			Functions
+# FUNCTION: PRINT HELP
 help() {
 echo -e " 
 Uso:   \033[38;5;141m`basename $0`\033[0m  \033[38;5;197m NIFTI_T2.nii.gz \033[0m \033[38;5;197m N \033[0m
@@ -56,7 +66,7 @@ echo -e "\033[48;5;39m\n[INIT]..... Modifica el tamaño de los voxeles, identifi
 Info "Creando una copia del archivo original"
 cmd "cp $orig $mri"
 
-Vox=`mrinfo -vox $mri`
+Vox=`mrinfo -spacing $mri`
 X=`echo $Vox | awk -v n="$N" -F " " '{print $1*n}'`
 Y=`echo $Vox | awk -v n="$N" -F " " '{print $2*n}'`
 Z=`echo $Vox | awk -v n="$N" -F " " '{print $3*n}'`
