@@ -18,6 +18,9 @@ En este repositorio vamos a guardar los pasos así como los scripts necesarios p
 1. [Corregistro no lineal a Atlas](#corregistro-no-lineal-a-atlas)
 1. [Pendientes](#pendientes)
 
+# 0. Para-pre procesamiento  
+1. 
+
 # 1. Preprocesamiento Estructural: `mrat_preproc`  
 Los siguientes pasos se implementaron en el script `mrat_preproc`  
 1. Copia el archivo original  
@@ -48,7 +51,7 @@ Programas recomendados: [Advance Normalization Tools ANTs](https://stnava.github
 
 # PENDIENTES  
 1. Montar el directorio con los archivos en /ernst  
-1. Pipeline y pruebas para el corregistro no lineal con el atlas (voy a usar la menos y la más dañada como control) ¿Cuál es?  
+1. Pipeline y pruebas para el corregistro no lineal con el atlas (voy a usar la menos y la más dañada como control) ¿Cuál es?, ya mero  
 
 
 
