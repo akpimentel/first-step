@@ -23,7 +23,12 @@ En este repositorio vamos a guardar los pasos así como los scripts necesarios p
 1. Hacer el control de calidad visual con mrview ** de cada imagen (eso incluye verificar la orientación y la resolución).
 ** F2 deja ver las 3 vistas
 1. Enlistartodas las imágenes que contengan el nombre TURBORAREhighres
-1. Cambiar el nombre a un identificador por rata
+1. Cambiar el nombre a un identificador por rata  
+1. Correr el script para todas las imagenes.  
+```bash
+for i in *_T2hi.nii.gz; do echo mrat_preproc $i 10; done
+```  
+> Hay que hacer un control de calidad de las imagenes dn4 y sincronizar las carpetas  
 
 # 1. Preprocesamiento Estructural: `mrat_preproc`  
 Los siguientes pasos se implementaron en el script `mrat_preproc`  
@@ -32,19 +37,19 @@ Los siguientes pasos se implementaron en el script `mrat_preproc`
 1. Calcula en centroide de la imagen y genera una mascara binaria basada en él.  
 1. Aplica limpieza de ruido con non-local means de Pierrick coupe.  
 1. Biasfield correction de ANTs  
-  
+
 ### Info: Denoise  
 Aquí se pueden utilizar un método basado en *non-local means* y *bias field correction* ya se encuentra implementado y libre, hay que checar este script [`denoiseN4`](https://github.com/rcruces/MRI_analytic_tools/blob/master/Freesurfer_preprocessing/denoiseN4). La documentación junto con otros métodos de *denoising* esta en este [link](https://sites.google.com/site/pierrickcoupe/softwares/denoising-for-medical-imaging).  
 > **References for denoiseN4:**  
 > - Tustison, N. J., Avants, B. B., Cook, P. A., Zheng, Y., Egan, A., Yushkevich, P. A., & Gee, J. C. (2010). N4ITK: improved N3 bias correction. IEEE transactions on medical imaging, 29(6), 1310-1320.  
 > - P. Coupé, P. Yger, S. Prima, P. Hellier, C. Kervrann, C. Barillot. An Optimized Blockwise NonLocal Means Denoising Filter for 3-D Magnetic Resonance Images. IEEE Transactions on Medical Imaging, 27(4):425–441, 2008. [MRI denoising by Pierrick Coupé](https://sites.google.com/site/pierrickcoupe/softwares/denoising-for-medical-imaging/mri-denoising).  
-  
+
 
 # 2. Segmentacion manual de las lesiones y volumetría: `countROI.R`  
 Se recomienda utilizar el programa [`mrtrix`](http://www.mrtrix.org/) con su visualizador [`mrview`](http://mrtrix.readthedocs.io/en/latest/reference/commands/mrview.html?highlight=mrview) para realizar ROIS manuales.  
 NOTA: La segmentación debe ser realizada por la misma persona para mantener la variabilidad usuario-dependiente.  
 
-Segmentación manual con el programa ITKskap. Se utilzan etiquetas independientes para cada estructura lesionada. Se obtienen las matrices con la segmentación y se cuantifica el volumen. 
+Segmentación manual con el programa ITKskap. Se utilzan etiquetas independientes para cada estructura lesionada. Se obtienen las matrices con la segmentación y se cuantifica el volumen.
 
 # 3. Corregistro no lineal a Atlas: `mrat_nii2atlas`  
 Aquí hay que llevar las imagenes ya procesadas al atlas. En el caso de que se cuente con volúmenes pre y post lesion hay que llevar la imagen de post-lesion a la pre y la pre al espacio del altas.  
@@ -61,11 +66,5 @@ rsync -avsh pimentelf@132.248.142.55:/misc/ernst/apimentel/MRI_BilateralCoordina
 
 rsync -avsh /run/media/striatum04/ANA/AnaKaren/MRI_BilateralCoordination/ pimentelf@132.248.142.55:/misc/ernst/apimentel/
 ** este comando striatum04 a ernst (este sólo es un ejemplo que sincronza desde una USB, cambiar el pwd cuando sea necesario)
- 
+
 1. Pipeline y pruebas para el corregistro no lineal con el atlas (voy a usar la menos y la más dañada como control) ¿Cuál es?, ya mero  
-
-
-
-
-
-
