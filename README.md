@@ -18,8 +18,12 @@ En este repositorio vamos a guardar los pasos así como los scripts necesarios p
 1. [Corregistro no lineal a Atlas](#corregistro-no-lineal-a-atlas)
 1. [Pendientes](#pendientes)
 
-# 0. Para-pre procesamiento  
-1. 
+# 0. Para -pre procesamiento  
+1. Cargar mrtrix3 y fsl5 antes de comenza
+1. Hacer el control de calidad visual con mrview ** de cada imagen (eso incluye verificar la orientación y la resolución).
+** F2 deja ver las 3 vistas
+1. Enlistartodas las imágenes que contengan el nombre TURBORAREhighres
+1. Cambiar el nombre a un identificador por rata
 
 # 1. Preprocesamiento Estructural: `mrat_preproc`  
 Los siguientes pasos se implementaron en el script `mrat_preproc`  
@@ -51,6 +55,12 @@ Programas recomendados: [Advance Normalization Tools ANTs](https://stnava.github
 
 # PENDIENTES  
 1. Montar el directorio con los archivos en /ernst  
+rsync -avsh pimentelf@132.248.142.55:/misc/ernst/apimentel/MRI_BilateralCoordination/ToProcess/ /localdata/Data/Ratas0104/MRI/PreProc/
+** este comando funciona para sincronizar los archivos de ernst a striatum04
+
+rsync -avsh /run/media/striatum04/ANA/AnaKaren/MRI_BilateralCoordination/ pimentelf@132.248.142.55:/misc/ernst/apimentel/
+** este comando striatum04 a ernst (este sólo es un ejemplo que sincronza desde una USB, cambiar el pwd cuando sea necesario)
+ 
 1. Pipeline y pruebas para el corregistro no lineal con el atlas (voy a usar la menos y la más dañada como control) ¿Cuál es?, ya mero  
 
 
