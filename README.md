@@ -55,6 +55,7 @@ Programas recomendados: [Advance Normalization Tools ANTs](https://stnava.github
 
 # PENDIENTES  
 1. Montar el directorio con los archivos en /ernst  
+
 rsync -avsh pimentelf@132.248.142.55:/misc/ernst/apimentel/MRI_BilateralCoordination/ToProcess/ /localdata/Data/Ratas0104/MRI/PreProc/
 ** este comando funciona para sincronizar los archivos de ernst a striatum04
 
