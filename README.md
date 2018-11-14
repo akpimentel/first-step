@@ -4,7 +4,7 @@ En este repositorio vamos a guardar los pasos así como los scripts necesarios p
 1. [`mrat_preproc`](https://github.com/akpimentel/first-step/blob/master/mrat_preproc) Es necesario realizar un preprocesamiento semi-automatizado que incluya, reorientación, máscara del cerebro, homogenización de las intensidades y mejora en de la calidad señal ruido.
 1. [`countROI.R`](https://github.com/akpimentel/first-step/blob/master/countROI.R) Posteriormente una segmentacion manual de la lesion sobre la imágen de alta resolución procesada y cuantificación del volumen.  
 1. [`mrat_nii2atlas`](https://github.com/akpimentel/first-step/blob/master/mrat_nii2atlas) Finalmente se realizara un corregisto al atlas [Waxholm Space Atlas of the Sprague Dawley (WHS-SD)](https://www.nitrc.org/projects/whs-sd-atlas).  
-1. [`mrat_fmri`](Preprocesamiento de resonancia magnetica funcional para rata)
+1. [`mrat_fmri`](https://github.com/akpimentel/first-step/blob/master/mrat_fmri) Preprocesamiento de resonancia magnetica funcional para rata  
 
 > **NOTA:** Idealmente se deberían tener dos imagenes por sujeto-rata, una pre y una post lesion para un mejor corregistro entre ellas, para estimar las deformaciones estructurales producidas por la lesion y para mejorar el corregistro no lineal al atlas WHS-SD.  
 > **Referencia del atlas:**  
